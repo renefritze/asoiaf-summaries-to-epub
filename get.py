@@ -9,7 +9,7 @@ def parse(book, ch_count):
     headers = {
       'User-Agent': 'Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.71 Safari/537.36'
     }
-    chapters_names = ['Prologue'] + ['Chapter_{}'.format(i) for i in range(ch_count)]
+    chapters_names = ['Prologue'] + ['Chapter_{}'.format(i) for i in range(1, ch_count+1)]
     domain = 'https://awoiaf.westeros.org'
 
     chapters = []
@@ -26,7 +26,8 @@ def parse(book, ch_count):
                 continue
             if tag.name == 'p' and last_h2 == 'Synopsis':
                 tags.append(tag)
-        ctnt = '\n'.join('<p>{}</p>'.format(t.get_text()) for t in tags)
+        ctnt = '<h2>{}</h2>'.format(chapter)
+        ctnt += '\n'.join('<p>{}</p>'.format(t.get_text()) for t in tags)
         chapters.append(pypub.create_chapter_from_string(ctnt, title=chapter))
     return chapters
 
