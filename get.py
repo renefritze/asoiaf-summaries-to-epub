@@ -33,9 +33,10 @@ def parse(book, ch_count):
 
 
 if __name__ == '__main__':
-    book = 'A_Game_of_Thrones'
-    ch_count = 2  # 72
-    epub = pypub.Epub(title=book)
-    for chapter in parse(book, ch_count):
-        epub.add_chapter(chapter)
-    epub.create_epub(os.getcwd())
+    books = [('A_Game_of_Thrones', 73), ('A_Clash_of_Kings', 70), ('A_Storm_of_Swords', 82), ('A_Feast_for_Crows', 46)
+             , ('A_Dance_with_Dragons', 73)]
+    for book, ch_count in books:
+        epub = pypub.Epub(title=book)
+        for chapter in parse(book, ch_count):
+            epub.add_chapter(chapter)
+        epub.create_epub(os.getcwd())
