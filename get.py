@@ -1,33 +1,28 @@
 #!/usr/bin/env python3
-import os
-import requests
-from bs4 import BeautifulSoup
+from requests_html import HTMLSession
 from ebooklib import epub
 
 
 def parse(book, ch_count):
-    headers = {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.71 Safari/537.36'
-    }
     chapters_names = ['Prologue'] + ['Chapter_{}'.format(i) for i in range(1, ch_count+1)]
     domain = 'https://awoiaf.westeros.org'
 
     chapters = []
-    last_h2 = None
+    session = HTMLSession()
     for chapter in chapters_names:
         tags = []
-        url = '{}/index.php/{}-{}'.format(domain, book, chapter)
-        response = requests.get(url, headers=headers)
-        soup = BeautifulSoup(response.text, 'html.parser')
-        content_div = soup.find('div', id='mw-content-text')
-        for tag in content_div.children:
-            if tag.name == 'h2':
-                last_h2 = tag.text
+        url = f'{domain}/index.php/{book}-{chapter}'
+        print(url)
+        r = session.get(url)
+        content_div = r.html.find('#mw-content-text', first=True)
+        for i, tag in enumerate(content_div.find('p')):
+            if i == 0:
                 continue
-            if tag.name == 'p' and last_h2 == 'Synopsis':
-                tags.append(tag)
+            if 'appearing:' == tag.text.lower():
+                break
+            tags.append(tag.text)
         ctnt = '<h2>{}</h2>'.format(chapter)
-        ctnt += '\n'.join('<p>{}</p>'.format(t.get_text()) for t in tags)
+        ctnt += '\n'.join(tags)
         chapters.append((chapter, ctnt))
     return chapters
 
@@ -42,16 +37,14 @@ def write_book(bookname, ch_count):
 
     book.add_author('G.R.R. Martin')
 
-    for idx, (chapter, ctnt) in enumerate(parse(book, ch_count)):
+    chapterlist = []
+    for idx, (chapter, ctnt) in enumerate(parse(bookname, ch_count)):
         c1 = epub.EpubHtml(title=chapter, file_name=f'{chapter}.xhtml', lang='en')
         c1.content = ctnt
         book.add_item(c1)
+        chapterlist.append(c1)
 
-    # # define Table Of Contents
-    # book.toc = (epub.Link('chap_01.xhtml', 'Introduction', 'intro'),
-    #             (epub.Section('Simple book'),
-    #              (c1, ))
-    #             )
+    book.toc = ((epub.Section(bookname), tuple(chapterlist)),)
 
     # add default NCX and Nav file
     book.add_item(epub.EpubNcx())
@@ -65,7 +58,8 @@ def write_book(bookname, ch_count):
     book.add_item(nav_css)
 
     # basic spine
-    book.spine = ['nav', c1]
+    book.spine = ['nav']
+    book.spine.extend(chapterlist)
 
     # write to the file
     epub.write_epub(f'{bookname}.epub', book, {})
